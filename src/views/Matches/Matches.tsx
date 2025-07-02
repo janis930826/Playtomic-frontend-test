@@ -25,6 +25,7 @@ export function Matches(props: MatchesProps) {
   const { onLogoutRequest, ...otherProps } = props
   const [page, setPage] = useState<number>(0)
   const [size, setSize] = useState<number>(10)
+  const [downloading, setDownloading] = useState(false)
   const fetcher = useApiFetcher()
   const query = useSWR(
     { page, size },
@@ -44,11 +45,56 @@ export function Matches(props: MatchesProps) {
   const matches: Match[] = query.data.matches
   const total: number = query.data.total
 
+  // --- Download all matches handler ---
+  const handleDownloadAll = async () => {
+    setDownloading(true)
+    try {
+      // Get ALL matches (set page=0, size=1000)
+      const res = await fetcher('GET /v1/matches', { page: 0, size: 1000 })
+      if (!res.ok) throw new Error(res.data.message)
+
+      const allMatches = res.data as Match[]
+      const csvRows = [
+        ['Match ID', 'Sport', 'Venue', 'Court', 'Start Date', 'End Date', 'Players'].join(','),
+        ...allMatches.map(match =>
+          [
+            match.matchId,
+            match.sport,
+            match.venueId,
+            match.courtId,
+            match.startDate,
+            match.endDate,
+            match.teams.flatMap(t => t.players.map(p => p.displayName)).join(' | '),
+          ]
+            .map(field => `"${String(field).replace(/"/g, '""')}"`)
+            .join(','),
+        ),
+      ]
+
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'matches.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not download matches. Please try again.')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   return (
     <Stack {...otherProps}>
       <Stack direction="row" marginBottom={2} justifyContent="space-between" alignItems="center">
         <Typography variant="h2">Matches</Typography>
-        <Stack direction="row" justifyContent="space-between">
+        <Stack direction="row" spacing={2} justifyContent="space-between">
+          <Button size="small" variant="outlined" onClick={handleDownloadAll} disabled={downloading}>
+            {downloading ? 'Downloading...' : '⬇️ Download all matches'}
+          </Button>
           <Button size="small" onClick={onLogoutRequest}>
             Logout
           </Button>
@@ -67,7 +113,6 @@ export function Matches(props: MatchesProps) {
           </TableHead>
           <TableBody>
             {matches.map(match => {
-              // Remember, match dates look like: 2024-01-04T09:00Z
               const startDate = match.startDate.substring(0, 10)
               const startTime = match.startDate.substring(11, 16)
               const endTime = match.endDate.substring(11, 16)
