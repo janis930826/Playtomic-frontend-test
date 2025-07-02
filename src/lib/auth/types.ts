@@ -126,4 +126,4 @@ interface TokensData {
   refreshExpiresAt: string
 }
 
-export { type Auth, type AuthInitializeConfig }
+export { type Auth, type AuthInitializeConfig, type UserData, type TokensData }
