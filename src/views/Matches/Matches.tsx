@@ -68,18 +68,21 @@ export function Matches(props: MatchesProps) {
           <TableBody>
             {matches.map(match => {
               // Remember, match dates look like: 2024-01-04T09:00Z
-              const startDate = match.startDate.substring(0, 10)
-              const startTime = match.startDate.substring(11, 16)
-              const endTime = match.endDate.substring(11, 16)
+              const start = new Date(match.startDate)
+              const end = new Date(match.endDate)
+              const formatTime = (date: Date): string =>
+                `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+              const formatDate = (date: Date): string =>
+                `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`
 
               return (
                 <TableRow key={match.matchId}>
                   <TableCell>
                     <Chip size="small" label={match.sport} />
                   </TableCell>
-                  <TableCell>{startDate}</TableCell>
-                  <TableCell>{startTime}</TableCell>
-                  <TableCell>{endTime}</TableCell>
+                  <TableCell>{formatDate(start)}</TableCell>
+                  <TableCell>{formatTime(start)}</TableCell>
+                  <TableCell>{formatTime(end)}</TableCell>
                   <TableCell align="left">
                     <AvatarGroup max={4} sx={{ flexDirection: 'row' }}>
                       {match.teams
